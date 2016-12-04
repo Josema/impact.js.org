@@ -1,0 +1,13 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/javascript" src="speed.js"></script>
+<script type="text/javascript">
+function log() {
+    try {console.log.apply(this, arguments)} catch(e){}
+    var line = Array.prototype.slice.call(arguments, 0).join(' ');
+    var current = document.getElementById('output').innerHTML;
+    document.getElementById('output').innerHTML = current + '\n' + line;
+} 
+</script>
+<button onclick="speed1(log)">Go</button>
+<pre id="output"></pre>
+

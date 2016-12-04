@@ -1,0 +1,41 @@
+<script>
+
+oReq = new XMLHttpRequest();
+oReq.addEventListener("load", function() {
+    var source = this.responseText;
+    console.log(style2(source));
+});
+var url = "https://unpkg.com/react@15.3.1/dist/react.min.js";
+oReq.open("GET", url);
+oReq.send();
+
+
+function style1(source) {
+    var script = document.createElement("script");
+    script.innerHTML = source;
+    var startParsing = performance.now();
+    document.head.appendChild(script);
+    return performance.now() - startParsing;
+}
+function style2(source) {
+    var startParsing = performance.now();
+    eval(source);
+    return performance.now() - startParsing;
+}
+
+function style3(url) {
+    var startParsing = performance.now();
+    var script = document.createElement('script')
+    script.type = 'text/javascript';
+    script.src = url;
+    document.body.appendChild(script);
+    return performance.now() - startParsing;
+}
+setTimeout(function(){
+console.log(style3('https://cdnjs.cloudflare.com/ajax/libs/angular.js/2.0.0-beta.17/angular2-all.umd.min.js'));
+},1000)
+
+
+
+
+</script>
