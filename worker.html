@@ -1,0 +1,27 @@
+<script type="text/javascript" src="axios.min.js"></script>
+<script type="text/javascript">
+
+console.log(
+    'totalJSHeapSize:', performance.memory.totalJSHeapSize,
+    'usedJSHeapSize:', performance.memory.usedJSHeapSize,
+    'jsHeapSizeLimit:', performance.memory.jsHeapSizeLimit
+);
+
+var worker=[],source,i=0;
+
+function run() {
+    worker[i] = new Worker('worker.js?'+Math.random());
+    worker[i].onmessage = onmessage;
+    worker[i].postMessage(source);
+}
+function onmessage(e) {
+    console.log(i, Date.now(), e.data);
+    if (i++<10)
+        run();
+};
+
+axios.get('https://unpkg.com/react@15.3.1/dist/react.min.js').then(function (response) {
+    source = response.data;
+    run();
+});
+</script>

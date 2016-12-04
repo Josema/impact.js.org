@@ -37,14 +37,22 @@ var axiosurl_url = 'https://unpkg.com/axios@0.15.3/dist/axios.min.js';
 
 // http://stackoverflow.com/questions/15342687/how-to-measures-script-execution-and-parsing-time
 // https://nolanlawson.com/2016/08/15/the-cost-of-small-modules/
-function round(number) {
-    return Math.round(number * 10) / 10;
+function round(number, round) {
+    if (typeof round != 'number') round = 1;
+    var decimal = Math.pow(10, round);
+    return Math.round(number * decimal) / decimal;
 }
 function log() {
     try {console.log.apply(this, arguments)} catch(e){}
     var line = Array.prototype.slice.call(arguments, 0).join(' ');
     var current = document.getElementById('output').innerHTML;
     document.getElementById('output').innerHTML = current + '\n' + line;
+}
+function bytesToSize(bytes) {
+   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+   if (bytes == 0) return '0 Byte';
+   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+   return round(bytes / Math.pow(1024, i),2) + ' ' + sizes[i];
 }
 function download(url) {
 
@@ -67,25 +75,27 @@ function download(url) {
         // Deflate
         var deflate = pako.deflate(fileString, { to: 'string' });
         var deflateBinary = pako.deflate(fileString);
-        log( 'Size (gzip):', round(deflate.length/1024) + ' / ' + round(fileString.length/1024) );
+        log( 'Size (gzip):', round(deflate.length/1024,2),'/', round(fileString.length/1024,2) );
 
 
         // Downloading
-        log( 'Time downloading real:', Math.round(endDownload-startDownload)  );
-        log( 'Time downloading gzip (100kb/s):', Math.round(deflate.length/100) );
+        log( 'Time downloading real:', round(endDownload-startDownload)  );
+        log( 'Time downloading gzip (100kb/s):', round(deflate.length/100) );
         // log( 'Time downloading (100kb/s):', Math.round(fileString.length/100) );
 
 
         // Parsing
         repeat(20, function(results, totalTime){
             var source = Math.random()+';'+fileString; // Avoiding chache
-            if (results.length%2)
-                eval(source);
-            else {
+            var memory = performance.memory.usedJSHeapSize;
+            if (results.length%2) {
                 var script = document.createElement("script");
                 script.innerHTML = source;
-                document.head.appendChild(script);
+                document.head.appendChild(script);  
             }
+            else
+                eval(source);
+            log( bytesToSize(performance.memory.usedJSHeapSize-memory) );
         }, function(parsingTime){
             log( 'Time parsing/evaluating:', Math.round(parsingTime.totalTime/parsingTime.results.length), JSON.stringify(parsingTime.results) );
         });
@@ -147,9 +157,8 @@ function repeat(repeatTimes, onIteration, onFinish, onBeforeIteration) {
             })
         }
         else {
-            recursive();
-            // eval('123456*10');
-            // setTimeout(recursive, 100);
+            // recursive();
+            setTimeout(recursive, 100);
         }
     })();
 }
@@ -157,7 +166,8 @@ function repeat(repeatTimes, onIteration, onFinish, onBeforeIteration) {
 var userAgent = new UAParser().getResult();
 log('Browser:', userAgent.browser.name, userAgent.browser.version, '('+userAgent.engine.name+')')
 log('OS:', userAgent.os.name, userAgent.os.version)
-log('Device:', userAgent.device.vendor, userAgent.device.model)
+// log('totalJSHeapSize:', performance.memory.totalJSHeapSize, 'usedJSHeapSize:', performance.memory.usedJSHeapSize, 'jsHeapSizeLimit:', performance.memory.jsHeapSizeLimit)
 
 
+javascript:(function(){var script=document.createElement('script');script.src='https://rawgit.com/paulirish/memory-stats.js/master/bookmarklet.js';document.head.appendChild(script);})()
 </script>
