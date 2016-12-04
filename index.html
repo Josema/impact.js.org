@@ -62,7 +62,6 @@ function download(url) {
         log(navigator.userAgent)
 
 
-    
 
 
         // Deflate
@@ -78,23 +77,36 @@ function download(url) {
 
 
         // Parsing
-        parse(fileString, function(parsingTime){
+        repeat(20, function(results, totalTime){
+            var source = Math.random()+';'+fileString; // Avoiding chache
+            if (results.length%2)
+                eval(source);
+            else {
+                var script = document.createElement("script");
+                script.innerHTML = source;
+                document.head.appendChild(script);
+            }
+        }, function(parsingTime){
             log( 'Time parsing/evaluating:', Math.round(parsingTime.totalTime/parsingTime.results.length), JSON.stringify(parsingTime.results) );
         });
 
 
 
-        // Inflate
-        var startInflate = now();
-        var inflate = pako.inflate(deflate, { to: 'string' });
-        var endInflate = now();
-        // log( 'Time decompresing:', Math.round(endInflate-startInflate) );
+        // // Inflate
+        // var startInflate = now();
+        // var inflate = pako.inflate(deflate, { to: 'string' });
+        // var endInflate = now();
+        // // log( 'Time decompresing:', Math.round(endInflate-startInflate) );
+
 
         // Inflate binary
-        var startInflateBinary = now();
-        var inflate = pako.inflate(deflateBinary);
-        var endInflateBinary = now();
-        log( 'Time decompresing binary:', Math.round(endInflateBinary-startInflateBinary) );
+        repeat(20, function(results, totalTime){
+            var inflate = pako.inflate(deflateBinary);
+        }, function(parsingTime){
+            log( 'Time decompresing binary:', Math.round(parsingTime.totalTime/parsingTime.results.length), JSON.stringify(parsingTime.results) );
+        }, function() {
+            deflateBinary = pako.deflate(Math.random()+';'+fileString);
+        });
 
 
     });
@@ -111,53 +123,35 @@ function now() {
         new Date().getTime();
 }
 
-function parse(sourceOriginal, callback) {
-
-
+function repeat(repeatTimes, onIteration, onFinish, onBeforeIteration) {
 
     var results = [],
-        repeatTimes = 20,
         totalTime = 0,
         time, startParsing, source;
 
-
     (function recursive() {
 
-        source = Math.random()+';'+sourceOriginal; // Avoiding chache
+        if (typeof onBeforeIteration == 'function')
+            onBeforeIteration(results, totalTime);
+
         startParsing = now();
-
-        if (results.length%2)
-            eval(source);
-        else {
-            var script = document.createElement("script");
-            script.innerHTML = source;
-            document.head.appendChild(script);
-        }
-
+        onIteration(results, totalTime);
         time = Math.round(now()-startParsing);
         totalTime += time;
         results.push(time);
 
         if (results.length===repeatTimes) {
-            callback({
+            onFinish({
                 totalTime: totalTime,
                 results: results
             })
         }
         else {
-            recursive()
+            recursive();
             // eval('123456*10');
             // setTimeout(recursive, 100);
         }
-
-    })()
-
-
-
-
-
-    // return ;
-
+    })();
 }
 
 var userAgent = new UAParser().getResult();
