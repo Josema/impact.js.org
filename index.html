@@ -1,12 +1,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/javascript" src="https://rawgit.com/paulirish/memory-stats.js/master/bookmarklet.js"></script>
 <script type="text/javascript" src="axios.min.js"></script>
 <script type="text/javascript" src="gzip.min.js"></script>
-<script type="text/javascript" src="promise.min.js"></script>
-<script type="text/javascript" src="assign.js"></script>
 <script type="text/javascript" src="ua-parser.min.js"></script>
 
-<button onclick="download(dop_url + '?' + Math.floor(Math.random() * 9e9))">dop</button>
+<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+<!-- <script type="text/javascript" src="promise.min.js"></script> -->
+<!-- <script type="text/javascript" src="assign.js"></script> -->
+
+
+<button onclick="download(dop_url2 + '?' + Math.floor(Math.random() * 9e9))">dop</button>
+<!-- <button onclick="download(dop_url3 + '?' + Math.floor(Math.random() * 9e9))">dop opt</button> -->
 <button onclick="download(mobx_url + '?' + Math.floor(Math.random() * 9e9))">mobx</button>
+<button onclick="download(deepstream_url + '?' + Math.floor(Math.random() * 9e9))">deepstream</button>
+<button onclick="download(redux_url + '?' + Math.floor(Math.random() * 9e9))">redux</button>
 <br>
 <button onclick="download(react_url + '?' + Math.floor(Math.random() * 9e9))">React</button>
 <button onclick="download(preact_url + '?' + Math.floor(Math.random() * 9e9))">preact</button>
@@ -27,6 +34,8 @@
 var react_url = 'https://unpkg.com/react@15.3.1/dist/react.min.js';
 var jquery_url = 'https://code.jquery.com/jquery-3.0.0.min.js';
 var dop_url = 'https://unpkg.com/dop@0.3.1/dist/browser.min.js';
+var dop_url2 = 'browser.min.js';
+var dop_url3 = 'browser.min.opt.js';
 var angular1_url = 'https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js';
 var angular2_url = 'https://cdnjs.cloudflare.com/ajax/libs/angular.js/2.0.0-beta.17/angular2-all.umd.min.js';
 var mobx_url = 'https://unpkg.com/mobx@2.6.4/lib/mobx.umd.min.js';
@@ -34,6 +43,8 @@ var preact_url = 'https://unpkg.com/preact@7.1.0/dist/preact.min.js';
 var inferno_url = 'https://unpkg.com/inferno@0.7.27/dist/inferno-compat.min.js';
 var vue_url = 'https://unpkg.com/vue@2.1.4/dist/vue.min.js';
 var axiosurl_url = 'https://unpkg.com/axios@0.15.3/dist/axios.min.js';
+var deepstream_url = 'https://unpkg.com/deepstream.io-client-js@2.0.0/dist/deepstream.min.js';
+var redux_url = 'redux.min.js';
 
 // http://stackoverflow.com/questions/15342687/how-to-measures-script-execution-and-parsing-time
 // https://nolanlawson.com/2016/08/15/the-cost-of-small-modules/
@@ -54,6 +65,11 @@ function bytesToSize(bytes) {
    var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
    return round(bytes / Math.pow(1024, i),2) + ' ' + sizes[i];
 }
+function average(arr) {
+    for (var i=0,t=arr.length,sum=0; i<t; ++i)
+        sum += arr[i];
+    return sum/t;
+}
 function download(url) {
 
     log('');
@@ -67,9 +83,6 @@ function download(url) {
         var fileString = response.data;
 
         log( url );
-        log(navigator.userAgent)
-
-
 
 
         // Deflate
@@ -85,7 +98,8 @@ function download(url) {
 
 
         // Parsing
-        repeat(20, function(results, totalTime){
+        var memories = [];
+        repeat(20, function(results){
             var source = Math.random()+';'+fileString; // Avoiding chache
             var memory = performance.memory.usedJSHeapSize;
             if (results.length%2) {
@@ -95,9 +109,11 @@ function download(url) {
             }
             else
                 eval(source);
-            log( bytesToSize(performance.memory.usedJSHeapSize-memory) );
-        }, function(parsingTime){
-            log( 'Time parsing/evaluating:', Math.round(parsingTime.totalTime/parsingTime.results.length), JSON.stringify(parsingTime.results) );
+            memories.push(performance.memory.usedJSHeapSize-memory);
+        }, function(results){
+            log( 'Time parsing/evaluating:', round(average(results),0), JSON.stringify(results) );
+            log( 'Memory:', bytesToSize(average(memories)) );
+
         });
 
 
@@ -110,10 +126,10 @@ function download(url) {
 
 
         // Inflate binary
-        repeat(20, function(results, totalTime){
+        repeat(20, function(results){
             var inflate = pako.inflate(deflateBinary);
-        }, function(parsingTime){
-            log( 'Time decompresing binary:', Math.round(parsingTime.totalTime/parsingTime.results.length), JSON.stringify(parsingTime.results) );
+        }, function(results){
+            log( 'Time decompresing binary:', round(average(results),0), JSON.stringify(results) );
         }, function() {
             deflateBinary = pako.deflate(Math.random()+';'+fileString);
         });
@@ -136,30 +152,23 @@ function now() {
 function repeat(repeatTimes, onIteration, onFinish, onBeforeIteration) {
 
     var results = [],
-        totalTime = 0,
         time, startParsing, source;
 
     (function recursive() {
 
         if (typeof onBeforeIteration == 'function')
-            onBeforeIteration(results, totalTime);
+            onBeforeIteration(results);
 
         startParsing = now();
-        onIteration(results, totalTime);
+        onIteration(results);
         time = Math.round(now()-startParsing);
-        totalTime += time;
         results.push(time);
 
-        if (results.length===repeatTimes) {
-            onFinish({
-                totalTime: totalTime,
-                results: results
-            })
-        }
-        else {
-            // recursive();
+        if (results.length===repeatTimes)
+            onFinish(results);
+        else
             setTimeout(recursive, 100);
-        }
+
     })();
 }
 
@@ -169,5 +178,4 @@ log('OS:', userAgent.os.name, userAgent.os.version)
 // log('totalJSHeapSize:', performance.memory.totalJSHeapSize, 'usedJSHeapSize:', performance.memory.usedJSHeapSize, 'jsHeapSizeLimit:', performance.memory.jsHeapSizeLimit)
 
 
-javascript:(function(){var script=document.createElement('script');script.src='https://rawgit.com/paulirish/memory-stats.js/master/bookmarklet.js';document.head.appendChild(script);})()
 </script>
